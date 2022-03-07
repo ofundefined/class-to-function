@@ -1,0 +1,20 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint"],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/eslint-recommended",
+    "plugin:@typescript-eslint/recommended"
+  ],
+  "rules": {
+    "lines-between-class-members": ["error", "always"],
+    "padding-line-between-statements": [
+      "error",
+      { "blankLine": "always", "prev": "function", "next": "function" },
+      { "blankLine": "always", "prev": "expression", "next": "expression" },
+      { "blankLine": "always", "prev": "block-like", "next": "block-like" },
+      { "blankLine": "always", "prev": "*", "next": "*" }
+    ]
+  }
+}

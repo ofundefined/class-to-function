@@ -1,11 +1,10 @@
 {
   "name": "class-to-function",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Convert React class components to functional components.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "lint:fix": "eslint -c=eslint-ts/.eslintrc --fix"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "bin": "./cli.js",
   "keywords": [

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 const { execSync } = require("child_process");
+const { ESLint } = require("eslint");
 const { program } = require("commander");
 var fs = require("fs");
 var isValidGlob = require("is-valid-glob");
@@ -10,16 +11,16 @@ const options = program.opts();
 program.parse();
 
 const inputPath = program.args;
-inputPath.forEach(filePath => {
+inputPath.forEach(async filePath => {
   if (isValidGlob(inputPath)) {
     //Make a .tmp copy
     execSync(`cp ${filePath} ${filePath}.tmp.tsx`);
     //Format (--fix) file with ESLint before running script
     //This makes sure class members have empty lines in between them, for instance
-    lintFixFile(`${filePath}.tmp.tsx`);
+    await lintFixFile(`${filePath}.tmp.tsx`);
 
     //Open temp file
-    fs.readFile(`${filePath}.tmp.tsx`, "utf8", function(err, data) {
+    fs.readFile(`${filePath}.tmp.tsx`, "utf8", async function(err, data) {
       if (err) {
         d;
         return console.log(err);
@@ -203,7 +204,7 @@ inputPath.forEach(filePath => {
       //@TODO: look for setState with prevProp
 
       //Write file and set `true` for shouldLintFix
-      writeFile(filePath, result, true, options.overwrite);
+      await writeFile(filePath, result, true, options.overwrite);
       if (options.overwrite)
         fs.unlink(`${filePath}.tmp.tsx`, err => {
           if (err) {
@@ -236,24 +237,23 @@ function processStateProperty(propLine) {
 
 //Format (--fix) file with ESLint AFTER running script
 //This makes sure local blocks and expressions have empty lines in between them, for instance
-function lintFixFile(filePath) {
+async function lintFixFile(filePath) {
   console.log("Starting linting-fixing file", filePath);
   try {
-    execSync(`npm run lint:fix -- ${filePath}`);
+    const eslint = new ESLint({ fix: true });
+    const results = await eslint.lintFiles(filePath);
+    await ESLint.outputFixes(results);
   } catch (error) {
     //@TODO: add verbose option
+    console.log(error);
   }
 }
 
-function writeFile(filePath, input, shouldLintFix, shouldOverWrite) {
-  fs.writeFile(
-    shouldOverWrite ? filePath : `${filePath}.tmp.tsx`,
-    input,
-    "utf8",
-    function(err) {
-      console.log("File has been written.", filePath);
-      if (err) return console.log(err);
-      if (shouldLintFix) lintFixFile(filePath);
-    },
-  );
+async function writeFile(filePath, input, shouldLintFix, shouldOverWrite) {
+  const actualFilePath = shouldOverWrite ? filePath : `${filePath}.tmp.tsx`;
+  fs.writeFile(actualFilePath, input, "utf8", async function(err) {
+    console.log("File has been written.", actualFilePath);
+    if (err) return console.log(err);
+    if (shouldLintFix) await lintFixFile(actualFilePath);
+  });
 }
