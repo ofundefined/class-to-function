@@ -1,0 +1,29 @@
+{
+  "name": "class-to-function",
+  "version": "1.0.0",
+  "description": "Convert React class components to functional components.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint:fix": "eslint -c=eslint-ts/.eslintrc --fix"
+  },
+  "keywords": [
+    "class",
+    "function",
+    "convert"
+  ],
+  "author": "ofundefined",
+  "license": "ISC",
+  "dependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.13.0",
+    "@typescript-eslint/parser": "^5.13.0",
+    "chalk": "^5.0.0",
+    "cli-table": "^0.3.11",
+    "commander": "^9.0.0",
+    "eslint": "^8.10.0",
+    "figlet": "^1.5.2",
+    "inquirer": "^8.2.0",
+    "is-valid-glob": "^1.0.0",
+    "shelljs": "^0.8.5"
+  }
+}
