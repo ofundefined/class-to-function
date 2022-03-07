@@ -1,6 +1,6 @@
 {
   "name": "class-to-function",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Convert React class components to functional components.",
   "main": "index.js",
   "scripts": {

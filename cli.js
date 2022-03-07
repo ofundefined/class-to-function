@@ -29,7 +29,7 @@ inputPath.forEach(async filePath => {
       //Look for `class MyComponent extends React.Component<TProps> {`
       //Replace it for `const MyComponent = (props: TProps) => {
       var result = data.replace(
-        /class (.*) extends .*<?([a-zA-Z0-9_$]*)[,]{0,1}(.*)?>?.*\{/gm,
+        /class (.*) extends [a-zA-Z0-9_$.]*[<]{0,1}([a-zA-Z0-9_$.]*)[,]{0,1}(.*)?[>]{0,1}.*\{/gm,
         function(g1, g2, g3) {
           var prefix = "";
           if (g3) {
