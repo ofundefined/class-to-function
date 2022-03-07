@@ -240,7 +240,10 @@ function processStateProperty(propLine) {
 async function lintFixFile(filePath) {
   console.log("Starting linting-fixing file", filePath);
   try {
-    const eslint = new ESLint({ fix: true });
+    const eslint = new ESLint({
+      fix: true,
+      overrideConfigFile: `${__dirname}/eslint-api/.eslintrc.ts.json`,
+    });
     const results = await eslint.lintFiles(filePath);
     await ESLint.outputFixes(results);
   } catch (error) {
