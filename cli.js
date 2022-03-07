@@ -208,6 +208,9 @@ inputPath.forEach(async filePath => {
       //Replace it with `myProperty` only
       result = result.replace(/state\.([ a-zA-Z0-9_$:,]+)/, "$1");
 
+      //Look for `const { ... } = state` (state destructuring) and clean it
+      result = result.replace(/^[ ]+const \{.*\} = state;?\n/gm, "");
+
       //@TODO: look for setState with callback, replace it with useEffect for callback
       //@TODO: look for setState with prevProp
 
