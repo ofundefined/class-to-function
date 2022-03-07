@@ -30,7 +30,15 @@ inputPath.forEach(async filePath => {
       //Replace it for `const MyComponent = (props: TProps) => {
       var result = data.replace(
         /class (.*) extends .*<?([a-zA-Z0-9_$]*)[,]{0,1}(.*)?>?.*\{/gm,
-        "const $1 = (props: $2) => {",
+        function(g1, g2, g3) {
+          var prefix = "";
+          if (g3) {
+            prefix = `: ${g3}`;
+          } else {
+            prefix = "";
+          }
+          return `const ${g2} = (props${prefix}) => {`;
+        },
       );
 
       //Look for `export default`
@@ -96,7 +104,7 @@ inputPath.forEach(async filePath => {
       //Look for arrow functions `handler = () => { ...`
       //Add `const` to the arrow function definition
       result = result.replace(
-        /(?<!const) (([a-zA-Z0-9_$]*) = \(.*\)[ ]*=>[ ]*\{)/g,
+        /(?<!const) (([a-zA-Z0-9_$]*) = \((.|\n)*?\)[ ]*=>[ ]*\{)/g,
         "const $1",
       );
 
