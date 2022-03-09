@@ -28,5 +28,5 @@ class-to-function ./src/yourcomponent/*.tsx
 
 Please feel free to contribute to this project.
 
-- This version is ready for typescript only components.
-- This version is not covering all lifecycle methods, like `shouldComponentUpdate` and `componentWillUnmount`.
+- This version is being developed and tested for typescript (.tsx) files.
+- This version is not covering all lifecycle methods, like `shouldComponentUpdate`, `UNSAFE_componentWillMount`, `getDerivedStateFromProps`, etc.
