@@ -81,6 +81,41 @@ inputPath.forEach(async filePath => {
         }
       }
 
+      //Look for `componentDidUpdate`
+      //Replace it with a default `React.useEffect` hook
+      //Check if it needs to be async
+      const componentDidUpdateRegex = /.*componentDidUpdate\(.*\).*\{((.|\n)+?)(^  \})\n/gm;
+      const componentDidUpdateMatcher = result.match(componentDidUpdateRegex);
+      if (componentDidUpdateMatcher?.length) {
+        let comment = "";
+        if (componentDidUpdateMatcher[0].includes("prevProp")) {
+          comment =
+            "//class-to-function: This hook does not need to compare `prevProps` with current `props`. You may delete any conditional created for this purpose, for example.";
+        }
+        if (componentDidUpdateMatcher[0].includes("async")) {
+          result = result.replace(
+            componentDidUpdateRegex,
+            `
+            React.useEffect(()=>{
+              const asyncEffect = async () => {
+                ${comment}
+                $1
+              }; 
+              asyncEffect();
+            }, [])
+            `,
+          );
+        } else {
+          result = result.replace(
+            componentDidUpdateRegex,
+            `React.useEffect(()=>{
+              ${comment}
+              $1
+            }, [])`,
+          );
+        }
+      }
+
       //Look for `render(): React.ReactElement<any> { ... }`
       //Leave only the inner body of the render function
       const renderBlockRegex = /^  render.*\{((.|\n)+?)(^  \})\n/gm;
