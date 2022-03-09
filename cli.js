@@ -84,7 +84,7 @@ inputPath.forEach(async filePath => {
       //Look for `componentDidUpdate`
       //Replace it with a default `React.useEffect` hook
       //Check if it needs to be async
-      const componentDidUpdateRegex = /.*componentDidUpdate\(.*\).*\{((.|\n)+?)(^  \})\n/gm;
+      const componentDidUpdateRegex = /.*componentDidUpdate\(([ a-zA-Z0-9_:{},]|\n)*\) ?\{((.|\n)+?)(^  \})\n/gm;
       const componentDidUpdateMatcher = result.match(componentDidUpdateRegex);
       if (componentDidUpdateMatcher?.length) {
         let comment = "";
