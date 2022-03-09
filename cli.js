@@ -65,6 +65,7 @@ inputPath.forEach(async filePath => {
           result = result.replace(
             componentDidMountRegex,
             `
+            //Previously componentDidMount
             React.useEffect(()=>{
               const asyncEffect = async () => {
                 $1
@@ -76,7 +77,11 @@ inputPath.forEach(async filePath => {
         } else {
           result = result.replace(
             componentDidMountRegex,
-            "React.useEffect(()=>{$1}, [])",
+            `
+            //Previously componentDidMount
+            React.useEffect(()=>{
+              $1
+            }, [])`,
           );
         }
       }
@@ -96,10 +101,11 @@ inputPath.forEach(async filePath => {
           result = result.replace(
             componentDidUpdateRegex,
             `
+            //Previously componentDidUpdate
             React.useEffect(()=>{
               const asyncEffect = async () => {
                 ${comment}
-                $1
+                $2
               }; 
               asyncEffect();
             }, [])
@@ -108,9 +114,48 @@ inputPath.forEach(async filePath => {
         } else {
           result = result.replace(
             componentDidUpdateRegex,
-            `React.useEffect(()=>{
+            `
+            //Previously componentDidUpdate
+            React.useEffect(()=>{
               ${comment}
-              $1
+              $2
+            }, [])`,
+          );
+        }
+      }
+
+      //Look for `componentWillUnmount`
+      //Replace it with a default `React.useEffect` hook
+      //Check if it needs to be async
+      const componentWillUnmountRegex = /.*componentWillUnmount\(([ a-zA-Z0-9_:{},]|\n)*\) ?\{((.|\n)+?)(^  \})\n/gm;
+      const componentWillUnmountMatcher = result.match(
+        componentWillUnmountRegex,
+      );
+      if (componentWillUnmountMatcher?.length) {
+        if (componentWillUnmountMatcher[0].includes("async")) {
+          result = result.replace(
+            componentWillUnmountRegex,
+            `
+            //Previously componentWillUnmount
+            React.useEffect(()=>{
+              return () => {
+                const asyncEffect = async () => {
+                  $2
+                }; 
+                asyncEffect();
+              }
+            }, [])
+            `,
+          );
+        } else {
+          result = result.replace(
+            componentWillUnmountRegex,
+            `
+            //Previously componentWillUnmount
+            React.useEffect(()=>{
+              return () => {
+                $2
+              }
             }, [])`,
           );
         }
@@ -212,7 +257,6 @@ inputPath.forEach(async filePath => {
       if (singleSetStates?.length) {
         for (const matcher of singleSetStates) {
           const singleSetStateProperties = matcher[1];
-          console.log({ singleSetStateProperties });
           let newSetStateHookBlock = "";
 
           //Check if it contains commas
