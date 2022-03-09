@@ -205,12 +205,14 @@ inputPath.forEach(async filePath => {
       //Look for single setState
       const singleSetStates = [
         ...result.matchAll(
-          /setState\(\{ ?\n?(([ a-zA-Z0-9_$:,]+|\n)+)\}\);\n/g,
+          /^[ ]*setState\(\{ ?\n?(([ a-zA-Z0-9_$():,]|\n)+)\}\);/gm,
         ),
       ];
+
       if (singleSetStates?.length) {
         for (const matcher of singleSetStates) {
           const singleSetStateProperties = matcher[1];
+          console.log({ singleSetStateProperties });
           let newSetStateHookBlock = "";
 
           //Check if it contains commas
@@ -244,7 +246,10 @@ inputPath.forEach(async filePath => {
       result = result.replace(/state\.([ a-zA-Z0-9_$:,]+)/, "$1");
 
       //Look for `const { ... } = state` (state destructuring) and clean it
-      result = result.replace(/^[ ]+const \{.*\} = state;?\n/gm, "");
+      result = result.replace(
+        /^[ ]+const \{([ a-zA-Z0-9_:{},]|\n)*?\} = state;?\n/gm,
+        "",
+      );
 
       //@TODO: look for setState with callback, replace it with useEffect for callback
       //@TODO: look for setState with prevProp
