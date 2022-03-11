@@ -26,9 +26,38 @@ inputPath.forEach(async filePath => {
         return console.log(err);
       }
 
+      var result = data;
+
+      //Get the component name
+      const componentNameRegex = /class (.*?) extends/gm;
+      const componentNameMatcher = result.match(componentNameRegex);
+      const componentName = componentNameMatcher?.length
+        ? componentNameMatcher[0].replace(componentNameRegex, "$1")
+        : "CouldNotFindComponentName";
+
+      //Look for static functions
+      const staticFunctionsRegex = /^  static (([a-zA-Z0-9_$]*) = (\(([a-zA-Z0-9_$:,. ]|\n){0,}?\))([a-zA-Z:.<> ]+)?( => )[({](.|\n)+?  [)}];)/gm;
+      const staticFunctionsMatcher = [...result.matchAll(staticFunctionsRegex)];
+
+      if (staticFunctionsMatcher?.length) {
+        for (const matcher of staticFunctionsMatcher) {
+          //Remove static function from inside the class
+          result = result.replace(matcher[0], "");
+          //Put the static function outside at the end
+          result = result.replace(
+            /(class (.*?) extends (.|\n)+^})/gm,
+            `$1\n
+            ${componentName}.${matcher[1]}
+          `,
+          );
+        }
+      }
+
+      result = result.replace(staticFunctionsRegex, "const $1 = ($2) => {$3}");
+
       //Look for `class MyComponent extends React.Component<TProps> {`
       //Replace it for `const MyComponent = (props: TProps) => {
-      var result = data.replace(
+      var result = result.replace(
         /class (.*) extends [a-zA-Z0-9_$.]*[<]{0,1}([a-zA-Z0-9_$.]*)[,]{0,1}(.*)?[>]{0,1}.*\{/gm,
         function(g1, g2, g3) {
           var prefix = "";
@@ -184,13 +213,13 @@ inputPath.forEach(async filePath => {
       //Look for arrow functions `handler = () => { ...`
       //Add `const` to the arrow function definition
       result = result.replace(
-        /(?<!const) (([a-zA-Z0-9_$]*) = \((.|\n)*?\)[ ]*=>[ ]*\{)/g,
+        /(?<!const) (([a-zA-Z0-9_$]*) = (\(([a-zA-Z0-9_$:,. ]|\n){0,}?\))([a-zA-Z:.<> ]+)?( => )(\(|\{)(.|\n)+?  (\)|\}));/gm,
         "const $1",
       );
 
       //Look for common functions like `render` (`render` will not exist anymore at this point)
       result = result.replace(
-        /^  ([a-zA-Z0-9_$]+)\((.*)\):?.*\{((.|\n)+)^  \}/gm,
+        /^  ([a-zA-Z0-9_$]+)\((.*)\):?.*\{((.|\n)+?)^  \}/gm,
         "const $1 = ($2) => {$3}",
       );
 
