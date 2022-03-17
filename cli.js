@@ -5,7 +5,14 @@ const { program } = require("commander");
 var fs = require("fs");
 var isValidGlob = require("is-valid-glob");
 
-program.option("--overwrite");
+program
+  .option(
+    "-o, --overwrite",
+    "Overwrite the file instead of creating a .tmp.tsx file.",
+  )
+  .option("-v, --verbose", "Shows verbose logs.")
+  .option("-d, --debug", "Shows debug logs.")
+  .option("-l, --lintOnly", "Only lints the file to debug eslint config.");
 
 const options = program.opts();
 program.parse();
@@ -19,6 +26,11 @@ inputPath.forEach(async filePath => {
     //This makes sure class members have empty lines in between them, for instance
     await lintFixFile(`${filePath}.tmp.tsx`);
 
+    if (options.lintOnly) {
+      console.log(`LintOnly flag activated. File has been linted only.`);
+      return;
+    }
+
     //Open temp file
     fs.readFile(`${filePath}.tmp.tsx`, "utf8", async function(err, data) {
       if (err) {
@@ -29,16 +41,32 @@ inputPath.forEach(async filePath => {
       var result = data;
 
       //Get the component name
+      verbose(`- Looking for component name.`);
       const componentNameRegex = /class (.*?) extends/gm;
+      debug(`     Regex patter to be used: ${componentNameRegex}`);
       const componentNameMatcher = result.match(componentNameRegex);
       const componentName = componentNameMatcher?.length
         ? componentNameMatcher[0].replace(componentNameRegex, "$1")
         : "CouldNotFindComponentName";
 
-      //Look for static functions
-      const staticFunctionsRegex = /^  static (([a-zA-Z0-9_$]*) = (\(([a-zA-Z0-9_$:,. ]|\n){0,}?\))([a-zA-Z:.<> ]+)?( => )[({](.|\n)+?  [)}];)/gm;
-      const staticFunctionsMatcher = [...result.matchAll(staticFunctionsRegex)];
+      if (!componentName) {
+        console.error(
+          "Component name was not found in this file. Are you sure it has a 'class MyComponent extends ...' definition?",
+        );
+        return;
+      }
+      debug(`     Component name is: ${componentName}`);
 
+      //Look for static functions
+      verbose(`- Looking for static functions.`);
+      const staticFunctionsRegex = /^  static (([a-zA-Z0-9_$]*) = (\(([a-zA-Z0-9_$:,. ]|\n){0,}?\))([a-zA-Z:.<> ]+)?( => )[({](.|\n)+?  [)}];)/gm;
+      debug(`     Regex patter to be used: ${staticFunctionsRegex}`);
+      const staticFunctionsMatcher = [...result.matchAll(staticFunctionsRegex)];
+      debug(
+        `     Found ${
+          staticFunctionsMatcher.length
+        } static functions in this class component.`,
+      );
       if (staticFunctionsMatcher?.length) {
         for (const matcher of staticFunctionsMatcher) {
           //Remove static function from inside the class
@@ -57,18 +85,22 @@ inputPath.forEach(async filePath => {
 
       //Look for `class MyComponent extends React.Component<TProps> {`
       //Replace it for `const MyComponent = (props: TProps) => {
-      var result = result.replace(
-        /class (.*) extends [a-zA-Z0-9_$.]*[<]{0,1}([a-zA-Z0-9_$.]*)[,]{0,1}(.*)?[>]{0,1}.*\{/gm,
-        function(g1, g2, g3) {
-          var prefix = "";
-          if (g3) {
-            prefix = `: ${g3}`;
-          } else {
-            prefix = "";
-          }
-          return `const ${g2} = (props${prefix}) => {`;
-        },
-      );
+      verbose(`- Looking for class definition.`);
+      const classDefinitionRegex = /class (.*) extends [a-zA-Z0-9_$.]*[<]{0,1}([a-zA-Z0-9_$.]*)[,]{0,1}(.*)?[>]{0,1}.*\{/gm;
+      debug(`     Regex patter to be used: ${classDefinitionRegex}`);
+      result = result.replace(classDefinitionRegex, function(g1, g2, g3) {
+        var prefix = "";
+        if (g3) {
+          debug(
+            `     This class has the following type for its 'props': ${g3}.`,
+          );
+          prefix = `: ${g3}`;
+        } else {
+          debug(`     This class has no type for its 'props'.`);
+          prefix = "";
+        }
+        return `const ${g2} = (props${prefix}) => {`;
+      });
 
       //Look for `export default`
       //If it exists, move the default export to the EOF
@@ -212,10 +244,17 @@ inputPath.forEach(async filePath => {
 
       //Look for arrow functions `handler = () => { ...`
       //Add `const` to the arrow function definition
-      result = result.replace(
-        /(?<!const) (([a-zA-Z0-9_$]*) = (\(([a-zA-Z0-9_$:,. ]|\n){0,}?\))([a-zA-Z:.<> ]+)?( => )(\(|\{)(.|\n)+?  (\)|\}));/gm,
-        "const $1",
-      );
+      verbose(`- Looking for root arrow functions`);
+      const arrowFunctionsRegex = /(?<!const) (([a-zA-Z0-9_$]*) = (\((.|\n){0,}?\))([a-zA-Z:.<> ]+)?( => )(\(|\{)(.|\n)+?^  (\)|\}));\n/gm;
+      debug(`     Regex patter to be used: ${arrowFunctionsRegex}`);
+      if (options.debug) {
+        const arrowFunctionsMatcher = [...result.matchAll(arrowFunctionsRegex)];
+        debug(
+          `     Found ${arrowFunctionsMatcher?.length ??
+            0} root arrow functions.`,
+        );
+      }
+      result = result.replace(arrowFunctionsRegex, "const $1");
 
       //Look for common functions like `render` (`render` will not exist anymore at this point)
       result = result.replace(
@@ -257,10 +296,11 @@ inputPath.forEach(async filePath => {
           );
         else {
           //Replace each state property with `useState` hook
+          const stateKeyValueRegex = /([a-zA-Z0-9_$]+): (.*),? ?\n?/gm;
           stateHooks = stateDefinition[0].replace(
-            /([a-zA-Z0-9_$]+): (.*),/g,
+            stateKeyValueRegex,
             substring => {
-              const match = substring.match(/([a-zA-Z0-9_$]+): (.*),/);
+              const match = substring.match(/([a-zA-Z0-9_$]+): (.*),? ?\n?/); //match won't work with /gm
               const key = match[1];
               const value = match[2];
               const setKey = `set${key[0].toUpperCase()}${key.substring(1)}`;
@@ -277,11 +317,14 @@ inputPath.forEach(async filePath => {
       }
 
       //Look for single setState
-      const singleSetStates = [
-        ...result.matchAll(
-          /^[ ]*setState\(\{ ?\n?(([ a-zA-Z0-9_$():,]|\n)+)\}\);/gm,
-        ),
-      ];
+      verbose(`- Looking for single 'setState' calls.`);
+      const singleSetStateRegex = /^[ ]*setState\(\{ ?\n?(([ a-zA-Z0-9_$()&|!.:,]|\n)+)\}\);/gm;
+      debug(`     Regex patter to be used: ${singleSetStateRegex}`);
+
+      const singleSetStates = [...result.matchAll(singleSetStateRegex)];
+      debug(
+        `     Found ${singleSetStates?.length ?? 0} single 'setState' calls.`,
+      );
 
       if (singleSetStates?.length) {
         for (const matcher of singleSetStates) {
@@ -341,6 +384,18 @@ inputPath.forEach(async filePath => {
   }
 });
 
+function verbose(message) {
+  if (options?.verbose) {
+    console.log(message);
+  }
+}
+
+function debug(message) {
+  if (options?.debug) {
+    console.debug(message);
+  }
+}
+
 function processStateProperty(propLine) {
   //Check if it has `:` separator
   if (propLine.includes(":")) {
@@ -362,7 +417,7 @@ function processStateProperty(propLine) {
 //Format (--fix) file with ESLint AFTER running script
 //This makes sure local blocks and expressions have empty lines in between them, for instance
 async function lintFixFile(filePath) {
-  console.log("Starting linting-fixing file", filePath);
+  verbose("- Starting linting-fixing file.");
   try {
     const eslint = new ESLint({
       fix: true,
