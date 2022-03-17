@@ -1,11 +1,21 @@
 {
   "root": true,
   "parser": "@typescript-eslint/parser",
-  "plugins": ["@typescript-eslint"],
+  "parserOptions": {
+    "ecmaFeatures": {
+      "jsx": true
+    }
+  },
+  "env": {
+    "react-native/react-native": true
+  },
+  "plugins": ["@typescript-eslint", "react", "react-hooks", "react-native"],
   "extends": [
     "eslint:recommended",
     "plugin:@typescript-eslint/eslint-recommended",
-    "plugin:@typescript-eslint/recommended"
+    "plugin:@typescript-eslint/recommended",
+    "plugin:react/recommended",
+    "plugin:react-hooks/recommended"
   ],
   "rules": {
     "lines-between-class-members": ["error", "always"],
@@ -15,6 +25,15 @@
       { "blankLine": "always", "prev": "expression", "next": "expression" },
       { "blankLine": "always", "prev": "block-like", "next": "block-like" },
       { "blankLine": "always", "prev": "*", "next": "return" }
-    ]
+    ],
+    "react/react-in-jsx-scope": "off",
+    "react/prop-types": [0],
+    "linebreak-style": [2, "unix"],
+    "prettier/prettier": "error"
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
   }
 }

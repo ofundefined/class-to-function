@@ -1,6 +1,6 @@
 {
   "name": "class-to-function",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Convert React class components to functional components.",
   "main": "index.js",
   "scripts": {
@@ -22,7 +22,10 @@
     "chalk": "^5.0.0",
     "cli-table": "^0.3.11",
     "commander": "^9.0.0",
-    "eslint": "^8.10.0",
+    "eslint": "^7.32.0",
+    "eslint-plugin-react": "^7.29.4",
+    "eslint-plugin-react-hooks": "^4.3.0",
+    "eslint-plugin-react-native": "^4.0.0",
     "figlet": "^1.5.2",
     "inquirer": "^8.2.0",
     "is-valid-glob": "^1.0.0",
