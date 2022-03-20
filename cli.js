@@ -289,21 +289,27 @@ inputPath.forEach(async filePath => {
             "Apparently there is more than one state definition.",
           );
         else {
+          const stateWithinBracketsRegex = /\{((.|\n)+?)\};/gm;
+          const stateWithinBracketsDefinition = stateDefinition[0].match(
+            stateWithinBracketsRegex,
+          );
+
           //Replace each state property with `useState` hook
-          const stateKeyValueRegex = /([a-zA-Z0-9_$]+): (.*),? ?\n?/gm;
-          stateHooks = stateDefinition[0].replace(
+          const stateKeyValueRegex = /([a-zA-Z0-9_$]+):? ?(.*),? ?\n?/gm;
+          stateHooks = stateWithinBracketsDefinition[0].replace(
             stateKeyValueRegex,
             substring => {
-              const match = substring.match(/([a-zA-Z0-9_$]+): (.*),? ?\n?/); //match won't work with /gm
+              const match = substring.match(/([a-zA-Z0-9_$]+):? ?(.*),? ?\n?/); //match won't work with /gm
               const key = match[1];
-              const value = match[2];
+              const value = match[2] && match[2] !== "," ? match[2] : "";
               const setKey = `set${key[0].toUpperCase()}${key.substring(1)}`;
               return `const [${key}, ${setKey}] = React.useState(${value});`;
             },
           );
 
-          //Clean state hooks
+          //Clean stateHooks
           stateHooks = stateHooks.replace(stateDefinitionRegex, "$1");
+          stateHooks = stateHooks.replace(stateWithinBracketsRegex, "$1");
 
           //Finally replace the state definition with state hooks
           result = result.replace(stateDefinition[0], stateHooks);
