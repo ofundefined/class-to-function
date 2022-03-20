@@ -20,25 +20,19 @@ program.parse();
 const inputPath = program.args;
 inputPath.forEach(async filePath => {
   if (isValidGlob(inputPath)) {
-    //Make a .tmp copy
-    execSync(`cp ${filePath} ${filePath}.tmp.tsx`);
-    //Format (--fix) file with ESLint before running script
-    //This makes sure class members have empty lines in between them, for instance
-    await lintFixFile(`${filePath}.tmp.tsx`);
-
-    if (options.lintOnly) {
-      console.log(`LintOnly flag activated. File has been linted only.`);
-      return;
-    }
-
-    //Open temp file
-    fs.readFile(`${filePath}.tmp.tsx`, "utf8", async function(err, data) {
+    //Open file
+    fs.readFile(filePath, "utf8", async function(err, data) {
       if (err) {
-        d;
         return console.log(err);
       }
 
-      var result = data;
+      var result = await lintFixText(data);
+
+      if (options.lintOnly) {
+        await writeFile(filePath, result, options.overwrite);
+        console.log(`LintOnly flag activated. File has been linted only.`);
+        return;
+      }
 
       //Get the component name
       verbose(`- Looking for component name.`);
@@ -370,14 +364,8 @@ inputPath.forEach(async filePath => {
       //@TODO: look for setState with callback, replace it with useEffect for callback
       //@TODO: look for setState with prevProp
 
-      //Write file and set `true` for shouldLintFix
-      await writeFile(filePath, result, true, options.overwrite);
-      if (options.overwrite)
-        fs.unlink(`${filePath}.tmp.tsx`, err => {
-          if (err) {
-            console.error(err);
-          }
-        });
+      //Write file
+      await writeFile(filePath, result, options.overwrite);
     });
   } else {
     program.error(`Invalid glob pattern (file path): ${inputPath}`);
@@ -414,28 +402,26 @@ function processStateProperty(propLine) {
   }
 }
 
-//Format (--fix) file with ESLint AFTER running script
-//This makes sure local blocks and expressions have empty lines in between them, for instance
-async function lintFixFile(filePath) {
-  verbose("- Starting linting-fixing file.");
+//Format (--fix) text with ESLint AFTER running script
+//This makes sure local blocks and expressions have empty lines in between them, for example
+async function lintFixText(text) {
+  verbose("- Starting linting-fixing text.");
   try {
     const eslint = new ESLint({
       fix: true,
-      overrideConfigFile: `${__dirname}/eslint-api/.eslintrc.ts.json`,
+      cwd: `${__dirname}/eslint-api/ts/`,
     });
-    const results = await eslint.lintFiles(filePath);
-    await ESLint.outputFixes(results);
+    const result = await eslint.lintText(text);
+    return result.length ? result[0].output : "Lint failed.";
   } catch (error) {
-    //@TODO: add verbose option
     console.log(error);
   }
 }
 
-async function writeFile(filePath, input, shouldLintFix, shouldOverWrite) {
+async function writeFile(filePath, input, shouldOverWrite) {
   const actualFilePath = shouldOverWrite ? filePath : `${filePath}.tmp.tsx`;
   fs.writeFile(actualFilePath, input, "utf8", async function(err) {
-    console.log("File has been written.", actualFilePath);
+    verbose(`- File has been written to ${actualFilePath}`);
     if (err) return console.log(err);
-    if (shouldLintFix) await lintFixFile(actualFilePath);
   });
 }

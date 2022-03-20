@@ -7,33 +7,33 @@
     }
   },
   "env": {
+    "es6": true,
+    "node": true,
+    "jest": true,
     "react-native/react-native": true
   },
-  "plugins": ["@typescript-eslint", "react", "react-hooks", "react-native"],
+  "plugins": ["@typescript-eslint", "prettier", "react-hooks", "react", "react-native"],
   "extends": [
     "eslint:recommended",
     "plugin:@typescript-eslint/eslint-recommended",
     "plugin:@typescript-eslint/recommended",
+    "plugin:react-hooks/recommended",
     "plugin:react/recommended",
-    "plugin:react-hooks/recommended"
+    "prettier",
+    "plugin:prettier/recommended"
   ],
   "rules": {
     "lines-between-class-members": ["error", "always"],
     "padding-line-between-statements": [
       "error",
       { "blankLine": "always", "prev": "function", "next": "function" },
-      { "blankLine": "always", "prev": "expression", "next": "expression" },
-      { "blankLine": "always", "prev": "block-like", "next": "block-like" },
       { "blankLine": "always", "prev": "*", "next": "return" }
     ],
-    "react/react-in-jsx-scope": "off",
-    "react/prop-types": [0],
-    "linebreak-style": [2, "unix"],
-    "prettier/prettier": "error"
+    "prettier/prettier": ["error", {"printWidth": 999}]
   },
   "settings": {
     "react": {
-      "version": "detect"
+      "version": "17"
     }
   }
 }
