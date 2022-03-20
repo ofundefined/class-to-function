@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-const { execSync } = require("child_process");
 const { ESLint } = require("eslint");
 const { program } = require("commander");
 var fs = require("fs");
