@@ -447,9 +447,15 @@ async function writeFile(
   codeInput: string,
   shouldOverWrite: boolean,
 ) {
+  const lintedCodeInput = await lintFixText(codeInput);
   const actualFilePath = shouldOverWrite ? filePath : `${filePath}.tmp.tsx`;
-  fs.writeFile(actualFilePath, codeInput, "utf8", async function (err: Error) {
-    verbose(`- File has been written to ${actualFilePath}`);
-    if (err) return console.log(err);
-  });
+  fs.writeFile(
+    actualFilePath,
+    lintedCodeInput,
+    "utf8",
+    async function (err: Error) {
+      verbose(`- File has been written to ${actualFilePath}`);
+      if (err) return console.log(err);
+    },
+  );
 }
