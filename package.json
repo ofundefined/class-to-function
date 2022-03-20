@@ -2,11 +2,17 @@
   "name": "class-to-function",
   "version": "1.0.11",
   "description": "Convert React class components to functional components.",
-  "main": "index.js",
+  "main": "./lib/cli.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' src/cli.ts",
+    "start:windows": "nodemon --watch 'src/**/*.ts' --exec \"npx ts-node\" src/cli.ts",
+    "create": "npm run build && npm run test",
+    "build": "tsc -p .",
+    "local": "npm i -g",
+    "refresh": "rm -rf ./node_modules ./package-lock.json && npm install"
   },
-  "bin": "./cli.js",
+  "bin": "./lib/cli.js",
   "keywords": [
     "react-native",
     "react",
@@ -34,5 +40,12 @@
     "prettier": "^2.6.0",
     "react": "^17.0.2",
     "shelljs": "^0.8.5"
+  },
+  "devDependencies": {
+    "@types/eslint": "^8.4.1",
+    "@types/node": "^17.0.21",
+    "nodemon": "^2.0.15",
+    "ts-node": "^10.7.0",
+    "typescript": "^4.6.2"
   }
 }

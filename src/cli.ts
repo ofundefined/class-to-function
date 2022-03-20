@@ -1,10 +1,11 @@
 #!/usr/bin/env node
-const { ESLint } = require("eslint");
-const { program } = require("commander");
+import { program } from "commander";
+import { ESLint } from "eslint";
 var fs = require("fs");
 var isValidGlob = require("is-valid-glob");
-
+var packageJson = require("../package.json");
 program
+  .version(packageJson.version)
   .option(
     "-o, --overwrite",
     "Overwrite the file instead of creating a .tmp.tsx file.",
@@ -16,11 +17,19 @@ program
 const options = program.opts();
 program.parse();
 
-const inputPath = program.args;
-inputPath.forEach(async filePath => {
+const inputPath = program.args as string[];
+
+if (!inputPath.length && options.verbose) {
+  console.log("You didn't specify any file to be converted.");
+  console.log("The flag -v is for `verbose`.");
+  console.log("Use the flag -V (capital V) for `version`.");
+  console.log(`The current version is ${packageJson.version}`);
+}
+
+inputPath.forEach(async (filePath) => {
   if (isValidGlob(inputPath)) {
     //Open file
-    fs.readFile(filePath, "utf8", async function(err, data) {
+    fs.readFile(filePath, "utf8", async function (err: Error, data: string) {
       if (err) {
         return console.log(err);
       }
@@ -52,13 +61,12 @@ inputPath.forEach(async filePath => {
 
       //Look for static functions
       verbose(`- Looking for static functions.`);
-      const staticFunctionsRegex = /^  static (([a-zA-Z0-9_$]*) = (\(([a-zA-Z0-9_$:,. ]|\n){0,}?\))([a-zA-Z:.<> ]+)?( => )[({](.|\n)+?  [)}];)/gm;
+      const staticFunctionsRegex =
+        /^  static (([a-zA-Z0-9_$]*) = (\(([a-zA-Z0-9_$:,. ]|\n){0,}?\))([a-zA-Z:.<> ]+)?( => )[({](.|\n)+?  [)}];)/gm;
       debug(`     Regex patter to be used: ${staticFunctionsRegex}`);
       const staticFunctionsMatcher = [...result.matchAll(staticFunctionsRegex)];
       debug(
-        `     Found ${
-          staticFunctionsMatcher.length
-        } static functions in this class component.`,
+        `     Found ${staticFunctionsMatcher.length} static functions in this class component.`,
       );
       if (staticFunctionsMatcher?.length) {
         for (const matcher of staticFunctionsMatcher) {
@@ -79,21 +87,25 @@ inputPath.forEach(async filePath => {
       //Look for `class MyComponent extends React.Component<TProps> {`
       //Replace it for `const MyComponent = (props: TProps) => {
       verbose(`- Looking for class definition.`);
-      const classDefinitionRegex = /class (.*) extends [a-zA-Z0-9_$.]*[<]{0,1}([a-zA-Z0-9_$.]*)[,]{0,1}(.*)?[>]{0,1}.*\{/gm;
+      const classDefinitionRegex =
+        /class (.*) extends [a-zA-Z0-9_$.]*[<]{0,1}([a-zA-Z0-9_$.]*)[,]{0,1}(.*)?[>]{0,1}.*\{/gm;
       debug(`     Regex patter to be used: ${classDefinitionRegex}`);
-      result = result.replace(classDefinitionRegex, function(g1, g2, g3) {
-        var prefix = "";
-        if (g3) {
-          debug(
-            `     This class has the following type for its 'props': ${g3}.`,
-          );
-          prefix = `: ${g3}`;
-        } else {
-          debug(`     This class has no type for its 'props'.`);
-          prefix = "";
-        }
-        return `const ${g2} = (props${prefix}) => {`;
-      });
+      result = result.replace(
+        classDefinitionRegex,
+        function (g1: string, g2: string, g3: string) {
+          var prefix = "";
+          if (g3) {
+            debug(
+              `     This class has the following type for its 'props': ${g3}.`,
+            );
+            prefix = `: ${g3}`;
+          } else {
+            debug(`     This class has no type for its 'props'.`);
+            prefix = "";
+          }
+          return `const ${g2} = (props${prefix}) => {`;
+        },
+      );
 
       //Look for `export default`
       //If it exists, move the default export to the EOF
@@ -112,7 +124,8 @@ inputPath.forEach(async filePath => {
       //Look for `componentDidMount`
       //Replace it with a default `React.useEffect` hook
       //Check if it needs to be async
-      const componentDidMountRegex = /.*componentDidMount\(\).*\{((.|\n)+?)(^  \})\n/gm;
+      const componentDidMountRegex =
+        /.*componentDidMount\(\).*\{((.|\n)+?)(^  \})\n/gm;
       const componentDidMountMatcher = result.match(componentDidMountRegex);
       if (componentDidMountMatcher?.length) {
         if (componentDidMountMatcher[0].includes("async")) {
@@ -143,7 +156,8 @@ inputPath.forEach(async filePath => {
       //Look for `componentDidUpdate`
       //Replace it with a default `React.useEffect` hook
       //Check if it needs to be async
-      const componentDidUpdateRegex = /.*componentDidUpdate\(([ a-zA-Z0-9_:{},]|\n)*\) ?\{((.|\n)+?)(^  \})\n/gm;
+      const componentDidUpdateRegex =
+        /.*componentDidUpdate\(([ a-zA-Z0-9_:{},]|\n)*\) ?\{((.|\n)+?)(^  \})\n/gm;
       const componentDidUpdateMatcher = result.match(componentDidUpdateRegex);
       if (componentDidUpdateMatcher?.length) {
         let comment = "";
@@ -181,7 +195,8 @@ inputPath.forEach(async filePath => {
       //Look for `componentWillUnmount`
       //Replace it with a default `React.useEffect` hook
       //Check if it needs to be async
-      const componentWillUnmountRegex = /.*componentWillUnmount\(([ a-zA-Z0-9_:{},]|\n)*\) ?\{((.|\n)+?)(^  \})\n/gm;
+      const componentWillUnmountRegex =
+        /.*componentWillUnmount\(([ a-zA-Z0-9_:{},]|\n)*\) ?\{((.|\n)+?)(^  \})\n/gm;
       const componentWillUnmountMatcher = result.match(
         componentWillUnmountRegex,
       );
@@ -238,13 +253,15 @@ inputPath.forEach(async filePath => {
       //Look for arrow functions `handler = () => { ...`
       //Add `const` to the arrow function definition
       verbose(`- Looking for root arrow functions`);
-      const arrowFunctionsRegex = /(?<!const) (([a-zA-Z0-9_$]*) = (\((.|\n){0,}?\))([a-zA-Z:.<> ]+)?( => )(\(|\{)(.|\n)+?^  (\)|\}));\n/gm;
+      const arrowFunctionsRegex =
+        /(?<!const) (([a-zA-Z0-9_$]*) = (\((.|\n){0,}?\))([a-zA-Z:.<> ]+)?( => )(\(|\{)(.|\n)+?^  (\)|\}));\n/gm;
       debug(`     Regex patter to be used: ${arrowFunctionsRegex}`);
       if (options.debug) {
         const arrowFunctionsMatcher = [...result.matchAll(arrowFunctionsRegex)];
         debug(
-          `     Found ${arrowFunctionsMatcher?.length ??
-            0} root arrow functions.`,
+          `     Found ${
+            arrowFunctionsMatcher?.length ?? 0
+          } root arrow functions.`,
         );
       }
       result = result.replace(arrowFunctionsRegex, "const $1");
@@ -295,14 +312,18 @@ inputPath.forEach(async filePath => {
 
           //Replace each state property with `useState` hook
           const stateKeyValueRegex = /([a-zA-Z0-9_$]+):? ?(.*),? ?\n?/gm;
-          stateHooks = stateWithinBracketsDefinition[0].replace(
+          stateHooks = stateWithinBracketsDefinition![0].replace(
             stateKeyValueRegex,
-            substring => {
+            (substring: string) => {
               const match = substring.match(/([a-zA-Z0-9_$]+):? ?(.*),? ?\n?/); //match won't work with /gm
-              const key = match[1];
-              const value = match[2] && match[2] !== "," ? match[2] : "";
-              const setKey = `set${key[0].toUpperCase()}${key.substring(1)}`;
-              return `const [${key}, ${setKey}] = React.useState(${value});`;
+              if (match?.length) {
+                const key = match[1];
+                const value = match[2] && match[2] !== "," ? match[2] : "";
+                const setKey = `set${key[0].toUpperCase()}${key.substring(1)}`;
+                return `const [${key}, ${setKey}] = React.useState(${value});`;
+              } else {
+                return "//@MANUAL WORK REQUIRED: there was some error when trying to parse the state definition to replace it for `React.useState()` hooks.";
+              }
             },
           );
 
@@ -317,7 +338,8 @@ inputPath.forEach(async filePath => {
 
       //Look for single setState
       verbose(`- Looking for single 'setState' calls.`);
-      const singleSetStateRegex = /^[ ]*setState\(\{ ?\n?(([ a-zA-Z0-9_$()&|!.:,]|\n)+)\}\);/gm;
+      const singleSetStateRegex =
+        /^[ ]*setState\(\{ ?\n?(([ a-zA-Z0-9_$()&|!.:,]|\n)+)\}\);/gm;
       debug(`     Regex patter to be used: ${singleSetStateRegex}`);
 
       const singleSetStates = [...result.matchAll(singleSetStateRegex)];
@@ -332,24 +354,20 @@ inputPath.forEach(async filePath => {
 
           //Check if it contains commas
           if (singleSetStateProperties.includes(",")) {
-            //It likety has more than one state property being set
+            //It likely has more than one state property being set
             const splitProperties = singleSetStateProperties.split(",");
             for (const prop of splitProperties) {
               const propTrimmed = prop.trim();
               if (propTrimmed != "")
-                newSetStateHookBlock += `${processStateProperty(
+                newSetStateHookBlock += `${replaceStateKeyValueBySetHook(
                   propTrimmed,
-                  matcher[0],
-                  matcher[0],
                 )}\n`;
             }
           } else {
             //It's likely already a single line property
             const propTrimmed = singleSetStateProperties.trim();
-            newSetStateHookBlock += `${processStateProperty(
+            newSetStateHookBlock += `${replaceStateKeyValueBySetHook(
               propTrimmed,
-              matcher[0],
-              matcher[0],
             )}\n`;
           }
           result = result.replace(matcher[0], newSetStateHookBlock);
@@ -377,29 +395,29 @@ inputPath.forEach(async filePath => {
   }
 });
 
-function verbose(message) {
+function verbose(message: string) {
   if (options?.verbose) {
     console.log(message);
   }
 }
 
-function debug(message) {
+function debug(message: string) {
   if (options?.debug) {
     console.debug(message);
   }
 }
 
-function processStateProperty(propLine) {
+function replaceStateKeyValueBySetHook(stateKeyValue: string) {
   //Check if it has `:` separator
-  if (propLine.includes(":")) {
-    const [key, value] = propLine.trim().split(":");
+  if (stateKeyValue.includes(":")) {
+    const [key, value] = stateKeyValue.trim().split(":");
     const hookSetState = `set${key[0].toUpperCase()}${key.substring(
       1,
     )}(${value.trim()});`;
     return hookSetState;
   } else {
     //If it does not have `:` separator, it's single inline like setState({ myPropertyValue })
-    const key = propLine;
+    const key = stateKeyValue;
     const hookSetState = `set${key[0].toUpperCase()}${key.substring(
       1,
     )}(${key});`;
@@ -409,7 +427,7 @@ function processStateProperty(propLine) {
 
 //Format (--fix) text with ESLint AFTER running script
 //This makes sure local blocks and expressions have empty lines in between them, for example
-async function lintFixText(text) {
+async function lintFixText(text: string) {
   verbose("- Starting linting-fixing text.");
   try {
     const eslint = new ESLint({
@@ -417,15 +435,20 @@ async function lintFixText(text) {
       cwd: `${__dirname}/eslint-api/ts/`,
     });
     const result = await eslint.lintText(text);
-    return result.length ? result[0].output : "Lint failed.";
+    return result?.[0].output ? result[0].output : "Lint failed.";
   } catch (error) {
     console.log(error);
+    return `There was some error linting text: ${JSON.stringify(error)}`;
   }
 }
 
-async function writeFile(filePath, input, shouldOverWrite) {
+async function writeFile(
+  filePath: string,
+  codeInput: string,
+  shouldOverWrite: boolean,
+) {
   const actualFilePath = shouldOverWrite ? filePath : `${filePath}.tmp.tsx`;
-  fs.writeFile(actualFilePath, input, "utf8", async function(err) {
+  fs.writeFile(actualFilePath, codeInput, "utf8", async function (err: Error) {
     verbose(`- File has been written to ${actualFilePath}`);
     if (err) return console.log(err);
   });
